@@ -3,7 +3,7 @@ Various utility functions.
 """
 
 from django.conf import settings
-import boto.ses
+import boto3
 
 # dkim isn't required, but we'll use it if we have it.
 try:
@@ -22,8 +22,8 @@ def get_boto_ses_connection():
     """
     Shortcut for instantiating and returning a boto SESConnection object.
 
-    :rtype: boto.ses.SESConnection
-    :returns: A boto SESConnection object, from which email sending is done.
+    :rtype: boto3.session.Session.client
+    :returns: A boto3 session client object, from which email sending is done.
     """
 
     access_key_id = getattr(
@@ -36,17 +36,12 @@ def get_boto_ses_connection():
         settings, 'CUCUMBER_SES_REGION_NAME',
         getattr(settings, 'AWS_SES_REGION_NAME', None))
     
-    if region_name != None:
-        return boto.ses.connect_to_region(
-            region_name,
-            aws_access_key_id=access_key_id,
-            aws_secret_access_key=access_key,
-        )
-    else:
-        return boto.connect_ses(
-            aws_access_key_id=access_key_id,
-            aws_secret_access_key=access_key,
-        )
+    return boto3.client(
+        'ses',
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=access_key,
+        region_name=region_name,
+    )
         
 
 

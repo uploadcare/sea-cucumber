@@ -26,7 +26,6 @@ class Command(BaseCommand):
         Prints some basic quota statistics.
         """
         quota = conn.get_send_quota()
-        quota = quota['GetSendQuotaResponse']['GetSendQuotaResult']
         
         print "--- SES Quota ---"
         print "  24 Hour Quota: %s" % quota['Max24HourSend']
@@ -38,7 +37,6 @@ class Command(BaseCommand):
         Prints a Today/Last 24 hour stats section.
         """
         stats = conn.get_send_statistics()
-        stats = stats['GetSendStatisticsResponse']['GetSendStatisticsResult']
         stats = stats['SendDataPoints']
         
         today = datetime.date.today()
@@ -47,7 +45,7 @@ class Command(BaseCommand):
         prev_day = {'HeaderName': 'Past two weeks'}
         
         for data_point in stats:
-            if self._is_data_from_today(data_point):
+            if data_point.get('Timestamp').date() == today:
                 day_dict = current_day
             else:
                 day_dict = prev_day
@@ -61,22 +59,6 @@ class Command(BaseCommand):
             print "  Rejects: %s" % day.get('Rejects', 0)
             print "  Complaints: %s" % day.get('Complaints', 0)
         
-    def _is_data_from_today(self, data_point):
-        """
-        Takes a DataPoint from SESConnection.get_send_statistics() and returns
-        True if it is talking about the current date, False if not.
-        
-        :param dict data_point: The data point to consider.
-        :rtype: bool
-        :returns: True if this data_point is for today, False if not (probably
-            yesterday).
-        """
-        today = datetime.date.today()
-        
-        raw_timestr = data_point['Timestamp']
-        dtime = datetime.datetime.strptime(raw_timestr, '%Y-%m-%dT%H:%M:%SZ')
-        return today.day == dtime.day
-    
     def _update_day_dict(self, data_point, day_dict):
         """
         Helper method for :meth:`_print_daily_stats`. Given a data point and

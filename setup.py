@@ -30,5 +30,5 @@ setup(
     long_description=LONG_DESCRIPTION,
     platforms=['any'],
     classifiers=CLASSIFIERS,
-    install_requires=['boto>=2.25.0', 'celery'],
+    install_requires=['boto3', 'celery'],
 )

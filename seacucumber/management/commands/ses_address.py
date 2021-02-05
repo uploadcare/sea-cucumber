@@ -72,10 +72,10 @@ class Command(BaseCommand):
             print("You have deleted %s from your SES account." % email)
         elif action == "list":
             verified_result = connection.list_verified_email_addresses()
-            if len(verified_result.VerifiedEmailAddresses) > 0:
+            if len(verified_result.get("VerifiedEmailAddresses", [])) > 0:
                 print("The following emails have been fully verified on your "\
                       "Amazon SES account:")
-                for vemail in verified_result.VerifiedEmailAddresses:
+                for vemail in verified_result.get("VerifiedEmailAddresses"):
                     print ("  %s" % vemail)
             else:
                 print("Your account has no fully verified email addresses yet.")

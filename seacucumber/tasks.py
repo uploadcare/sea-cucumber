@@ -7,7 +7,6 @@ import logging
 
 from django.conf import settings
 from celery.task import Task
-from boto.ses.exceptions import SESAddressBlacklistedError, SESDomainEndsWithDotError, SESLocalAddressCharacterError, SESIllegalAddressError
 
 from seacucumber.util import get_boto_ses_connection, dkim_sign
 
@@ -36,52 +35,40 @@ class SendEmailTask(Task):
             message to.
         :param str message: The body of the message.
         """
-        self._open_ses_conn()
+        conn = self._open_ses_conn()
         try:
             # We use the send_raw_email func here because the Django
             # EmailMessage object we got these values from constructs all of
             # the headers and such.
             self.connection.send_raw_email(
-                source=from_email,
-                destinations=recipients,
-                raw_message=dkim_sign(message),
+                Source=from_email,
+                Destinations=recipients,
+                RawMessage={'Data': dkim_sign(message)},
             )
-        except SESAddressBlacklistedError, exc:
-            # Blacklisted users are those which delivery failed for in the
-            # last 24 hours. They'll eventually be automatically removed from
-            # the blacklist, but for now, this address is marked as
-            # undeliverable to.
+        except self.connection.exceptions.AccountSendingPausedException as exc:
+            # Happens when the account gets disabled. We shouldn't be retrying this
             logger.warning(
-                'Attempted to email a blacklisted user: %s' % recipients,
+                'SES Account Paused',
                 exc_info=exc,
                 extra={'trace': True}
             )
             return False
-        except SESDomainEndsWithDotError, exc:
-            # Domains ending in a dot are simply invalid.
+        except self.connection.exceptions.MessageRejected as exc:
+            # Message got rejected by SES.
             logger.warning(
-                'Invalid recipient, ending in dot: %s' % recipients,
+                'Message intended for %s got rejected by AWS' % recipients,
                 exc_info=exc,
                 extra={'trace': True}
             )
             return False
-        except SESLocalAddressCharacterError, exc:
-            # Invalid character, usually in the sender "name".
+        except self.connection.exceptions.BaseClientException as exc:
             logger.warning(
-                'Local address contains control or whitespace: %s' % recipients,
+                'General SES Exception occured while trying to send to %s' % recipients,
                 exc_info=exc,
                 extra={'trace': True}
             )
             return False
-        except SESIllegalAddressError, exc:
-            # A clearly mal-formed address.
-            logger.warning(
-                'Illegal address: %s' % recipients,
-                exc_info=exc,
-                extra={'trace': True}
-            )
-            return False
-        except Exception, exc:
+        except Exception as exc:
             # Something else happened that we haven't explicitly forbade
             # retry attempts for.
             #noinspection PyUnresolvedReferences
