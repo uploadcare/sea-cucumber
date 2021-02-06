@@ -35,7 +35,7 @@ class SESBackend(BaseEmailBackend):
             SendEmailTask.apply_async(args=[
                     message.from_email,
                     message.recipients(),
-                    message.message().as_string().decode('utf8'),], 
+                    message.message().as_string(),],
                 queue=queue,
             )
             num_sent += 1

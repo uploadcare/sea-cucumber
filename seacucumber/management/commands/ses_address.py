@@ -25,6 +25,10 @@ class Command(BaseCommand):
     # <action> must be one of the following.
     valid_actions = ['verify', 'list', 'delete']
 
+    def add_arguments(self, parser):
+        # Kept the argument name args to be compatible with django 1.6+
+        parser.add_argument('args', nargs='+', type=str)
+
     def handle(self, *args, **options):
         """
         Parses/validates, and breaks off into actions.
@@ -65,10 +69,10 @@ class Command(BaseCommand):
         """
         connection = self._get_ses_connection()
         if action == "verify":
-            connection.verify_email_address(email)
+            connection.verify_email_address(EmailAddress=email)
             print("A verification email has been sent to %s." % email)
         elif action == "delete":
-            connection.delete_verified_email_address(email)
+            connection.delete_verified_email_address(EmailAddress=email)
             print("You have deleted %s from your SES account." % email)
         elif action == "list":
             verified_result = connection.list_verified_email_addresses()
